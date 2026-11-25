@@ -1,5 +1,5 @@
 /* Offline support: network first, cached copy when offline. Only same-origin GET requests are cached. */
-const CACHE = 'psych-stats-lab-20261120b';
+const CACHE = 'psych-stats-lab-396fe035';
 const CORE = [
  "./",
  "icon-192.png",
@@ -19,11 +19,12 @@ const CORE = [
  "destrieux.js?v=20261101a",
  "stats-neuro.js?v=20261101b",
  "privacy.js?v=2298d6fa",
+ "visits.js?v=20261120a",
  "know.js?v=ad290bf1",
  "tests.js?v=1e611eb9",
  "reward.js?v=20261104a",
  "stats-thesis.js?v=20261104a",
- "admin.js?v=20261120b",
+ "admin.js?v=5c37c148",
  "laws.js?v=cca56bd5"
 ];
 self.addEventListener('install', e => {

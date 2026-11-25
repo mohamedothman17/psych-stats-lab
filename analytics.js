@@ -42,13 +42,13 @@
     return '<div class="an-bars">' + rows.map(function (x) { var p = Math.round(100 * x[1] / R.length); return '<div><span>' + E(x[0]) + '</span><span><i style="width:' + p + '%"></i></span><span>' + p + '%</span></div>'; }).join('') + '</div>';
   }
   async function visitors() {
-    var base = 'https://mo-psych-stats-lab.goatcounter.com', site = app() === 'stats' ? '/psych-stats-lab/#path' : '/psych-scales-lab/#home';
-    async function get(p) { var r = await fetch(base + '/counter/' + encodeURIComponent(p) + '.json'); if (!r.ok) throw 0; return (await r.json()).count; }
-    var t = null, s = null;
-    try { t = await get('TOTAL'); } catch (e) { }
-    try { s = await get(site); } catch (e) { }
-    if (t == null && s == null) return '<p class="muted" style="margin:0">العدد غير متاح هنا الآن.</p>';
-    return '<div class="an-k">' + (t != null ? '<div><small>زيارات الموقعين</small><b>' + E(t) + '</b></div>' : '') + (s != null ? '<div><small>الصفحة الرئيسية لهذا الموقع</small><b>' + E(s) + '</b></div>' : '') + '</div>';
+    var base = 'https://mo-psych-stats-lab.goatcounter.com/counter/TOTAL.json', blocked = false;
+    var day = function (n) { var d = new Date(Date.now() - n * 864e5); return d.toISOString().slice(0, 10); };
+    async function get(q) { try { var r = await fetch(base + q, { cache: 'no-store' }); if (!r.ok) return null; var c = (await r.json()).count; return c == null ? null : +c; } catch (e) { blocked = true; return null; } }
+    var v = await Promise.all([get(''), get('?start=' + day(6)), get('?start=' + day(0))]);
+    if (v[0] == null) return '<p class="muted" style="margin:0">' + (blocked ? 'المتصفح ده بيمنع عدّاد الزوار (غالبًا مانع إعلانات). اسمح للموقع فيه، أو افتح «التفاصيل».' : 'العدد غير متاح دلوقتي، جرّب بعد شوية.') + '</p>';
+    var t = function (k, n) { return n == null ? '' : '<div><small>' + k + '</small><b>' + E(n) + '</b></div>'; };
+    return '<div class="an-k">' + t('كل الزيارات', v[0]) + t('آخر ٧ أيام', v[1]) + t('النهارده', v[2]) + '</div>';
   }
   async function visitLog(box) {
     var all = [], scope = 'mine', A = app();

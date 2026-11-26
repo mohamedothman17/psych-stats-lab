@@ -96,7 +96,7 @@
   /* ---------- psychological results shared with consent (know/{uid}, tests/{uid}): follow-up alerts, item-level CSV, full backup ---------- */
   var tdate = function (t) { if (!t) return null; if (t.toDate) return t.toDate(); if (t.seconds != null) return new Date(t.seconds * 1000); var d = new Date(t); return isNaN(d) ? null : d; };
   var stamp = function (d) { return d ? dkey(d) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') : ''; };
-  var cq = function (x) { x = String(x == null ? '' : x); return /[",\n\r]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
+  var cq = function (x) { x = String(x == null ? '' : x); if (/^[=+@\t]/.test(x)) x = "'" + x; return /[",\n\r]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
   function saveFile(name, text, mime) { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
   var TQ = function () { try { return typeof TESTS !== 'undefined' && TESTS.Q ? TESTS.Q : {}; } catch (e) { return {}; } };
   var COGN = { matrix: 'المصفوفات', series: 'المتسلسلات العددية', analog: 'التناظر اللفظي', rotate: 'التدوير الذهني', coding: 'ترميز الرموز' };

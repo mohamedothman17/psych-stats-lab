@@ -1,5 +1,5 @@
 /* Offline support: network first, cached copy when offline. Only same-origin GET requests are cached. */
-const CACHE = 'psych-stats-lab-d40a5d58';
+const CACHE = 'psych-stats-lab-c7a0a70f';
 const CORE = [
  "./",
  "icon-192.png",
@@ -20,7 +20,7 @@ const CORE = [
  "stats-neuro.js?v=df252a82",
  "privacy.js?v=2298d6fa",
  "visits.js?v=60e8c491",
- "know.js?v=ad290bf1",
+ "know.js?v=6a1a2721",
  "tests.js?v=660c3b93",
  "reward.js?v=ea623b54",
  "stats-thesis.js?v=08dd84c0",

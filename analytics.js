@@ -1,7 +1,8 @@
 /* ===== Admin analytics (shared by both labs; loaded only inside the admin page) =====
    Study progress of registered students (users/{uid}, readable by admins under the Firestore rules),
    daily activity, per-lesson completion, a sortable table with CSV export, and anonymous visitor totals
-   from GoatCounter. Psychological results (know-yourself, tests) are not read here. ===== */
+   from GoatCounter. Results shared with consent (know/, tests/) feed only the follow-up alerts, the item-level CSV and
+   the full JSON backup; the alert cut-offs are the ones already used by know.js and tests.js. ===== */
 (function () {
   'use strict';
   var E = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
@@ -10,7 +11,8 @@
   var DAY = 864e5;
   var CSS = '.an{display:flex;flex-direction:column;gap:14px}.an-k{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}.an-k div{border:1px solid var(--line,#ddd);border-radius:12px;padding:10px}.an-k small{display:block;opacity:.7;font-size:12.5px}.an-k b{font-size:22px}' +
     '.an svg{width:100%;height:auto;display:block}.an-bars{display:flex;flex-direction:column;gap:4px;font-size:13px}.an-bars div{display:grid;grid-template-columns:minmax(120px,38%) 1fr 44px;gap:8px;align-items:center}.an-bars i{display:block;height:10px;border-radius:5px;background:var(--primary,var(--teal,#4f46e5))}' +
-    '.an table{border-collapse:collapse;width:100%;font-size:13px}.an th,.an td{border-bottom:1px solid var(--line,#ddd);padding:6px;text-align:start;white-space:nowrap}.an th{cursor:pointer;user-select:none}.an-tw{overflow-x:auto}.an .muted{opacity:.7}';
+    '.an table{border-collapse:collapse;width:100%;font-size:13px}.an th,.an td{border-bottom:1px solid var(--line,#ddd);padding:6px;text-align:start;white-space:nowrap}.an th{cursor:pointer;user-select:none}.an-tw{overflow-x:auto}.an .muted{opacity:.7}' +
+    '.an-al{border:2px solid #b3261e;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px}.an-al tr.an-lv0 td{background:rgba(179,38,30,.14)}.an-al tr.an-lv1 td{background:rgba(179,38,30,.06)}.an-c{display:inline-block;border-radius:999px;padding:0 9px;font-size:12.5px}.an-c.r{background:#fbe3e1;color:#b3261e}.an-c.y{background:#fbf0d5;color:#8a5a00}.an-x{display:flex;gap:8px;flex-wrap:wrap;align-items:center}';
   function css() { if (document.getElementById('an-css')) return; var s = document.createElement('style'); s.id = 'an-css'; s.textContent = CSS; document.head.appendChild(s); }
   function app() { return document.title.indexOf('الإحصاء') >= 0 ? 'stats' : 'scales'; }
   function lessonsMeta() {
@@ -185,13 +187,17 @@
     var users = [];
     try { users = await fs.list('users'); }
     catch (e) { el.firstChild.innerHTML = '<h3>تحليلات الطلاب والزوار</h3><p style="color:#b3261e">تعذر قراءة بيانات الطلاب. انشر ملف القواعد الجديد في Firebase (القسم الخاص بـ users يسمح للمسؤول بالقراءة)، ثم حدّث الصفحة.</p>'; return; }
+    var KN = [], TS = [];
+    await Promise.all([fs.list('know').then(function (d) { KN = d; }, function () { }), fs.list('tests').then(function (d) { TS = d; }, function () { })]);
+    var PP = people(KN, TS, users), AL = alerts(PP);
     var R = users.filter(function (u) { return u[A] && u[A].state; }).map(function (u) { return row(u, A); }), now = Date.now();
     var within = function (d) { return R.filter(function (r) { return r.last && now - r.last.getTime() <= d * DAY; }).length; };
     var avg = function (f) { var v = R.map(f).filter(function (x) { return x != null; }); return v.length ? Math.round(v.reduce(function (a, b) { return a + b; }, 0) / v.length) : 0; };
     var sortK = 'last', dir = -1;
     var K = function (l, v) { return '<div><small>' + l + '</small><b>' + v + '</b></div>'; };
     var sec = el.firstChild;
-    sec.innerHTML = '<h3>تحليلات الطلاب والزوار</h3>' +
+    sec.innerHTML = '<h3>تحليلات الطلاب والزوار</h3>' + alertsHtml(AL) +
+      '<div class="an-x"><button type="button" class="ad-btn" id="anItems">تنزيل الإجابات بندًا بندًا (CSV)</button><button type="button" class="ad-btn" id="anBk">نسخة احتياطية</button><span id="anBkN">' + backupNote() + '</span></div>' +
       '<p class="muted" style="margin:0">التقدم الدراسي لكل الطلاب المسجلين (الدروس والتدريب والنقاط وأيام النشاط). نتائج «اعرف نفسك» والاختبارات النفسية تظهر في جدولها تحت لمن وافق على مشاركتها فقط.</p>' +
       '<div class="an-k">' + K('طلاب مسجلون', R.length) + K('نشطون اليوم', within(1)) + K('آخر 7 أيام', within(7)) + K('آخر 30 يومًا', within(30)) + K(A === 'stats' ? 'متوسط الدروس المكتملة' : 'متوسط الأقسام المقروءة', avg(function (r) { return r.prog; })) + K('متوسط الدقة', avg(function (r) { return r.acc; }) + '%') + K('مجموع الأسئلة المجابة', R.reduce(function (a, r) { return a + r.answered; }, 0)) + '</div>' +
       '<h4 style="margin:6px 0 0">الطلاب النشطون يوميًا (آخر 30 يومًا)</h4>' + barsDaily(R) +
@@ -207,6 +213,8 @@
     }
     table();
     sec.querySelector('#anCsv').onclick = function () { csv(R, A); };
+    sec.querySelector('#anItems').onclick = function () { var n = itemsCsv(PP, A); this.textContent = 'اتنزّل (' + n + ' صف)'; };
+    sec.querySelector('#anBk').onclick = async function () { var b = this; b.disabled = true; b.textContent = 'جارٍ التجهيز…'; try { var n = await backup(fs); b.textContent = 'اتنزّلت (' + n + ' مستند)'; } catch (e) { b.textContent = 'تعذر التنزيل'; } b.disabled = false; sec.querySelector('#anBkN').innerHTML = backupNote(); };
     sec.querySelector('#anV').innerHTML = await visitors();
     visitLog(sec.querySelector('#anL'));
   }

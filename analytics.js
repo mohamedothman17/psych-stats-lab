@@ -91,6 +91,94 @@
     var blob = new Blob(['﻿' + lines.map(function (l) { return l.map(q).join(','); }).join('\n')], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'students-' + A + '-' + dkey(Date.now()) + '.csv'; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
   }
+  /* ---------- psychological results shared with consent (know/{uid}, tests/{uid}): follow-up alerts, item-level CSV, full backup ---------- */
+  var tdate = function (t) { if (!t) return null; if (t.toDate) return t.toDate(); if (t.seconds != null) return new Date(t.seconds * 1000); var d = new Date(t); return isNaN(d) ? null : d; };
+  var stamp = function (d) { return d ? dkey(d) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') : ''; };
+  var cq = function (x) { x = String(x == null ? '' : x); return /[",\n\r]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
+  function saveFile(name, text, mime) { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
+  var TQ = function () { try { return typeof TESTS !== 'undefined' && TESTS.Q ? TESTS.Q : {}; } catch (e) { return {}; } };
+  var COGN = { matrix: 'المصفوفات', series: 'المتسلسلات العددية', analog: 'التناظر اللفظي', rotate: 'التدوير الذهني', coding: 'ترميز الرموز' };
+  var QN = { bigfive: 'Mini-IPIP (الشخصية)', rses: 'روزنبرج لتقدير الذات', pss: 'PSS-10 (الضغط)', swls: 'SWLS (الرضا عن الحياة)', brs: 'BRS (الصمود)', ucla: 'UCLA-3 (الوحدة)', grit: 'Grit-S (المثابرة)', erq: 'ERQ (تنظيم الانفعال)', asrs: 'ASRS (فرز الانتباه)' };
+  /* one entry per student who shared: { id, name, email, phone, know: {...}|null, kAt, tests: {...}|null } */
+  function people(know, tests, users) {
+    var P = {}, U = {}; (users || []).forEach(function (u) { U[u.id] = u; });
+    var get = function (d) { var p = P[d.id]; if (!p) { var u = U[d.id] || {}; p = P[d.id] = { id: d.id, name: d.name || u.name || '', email: d.email || u.email || '', phone: u.phone || '', know: null, kAt: null, tests: null }; } if (!p.name && d.name) p.name = d.name; if (!p.email && d.email) p.email = d.email; return p; };
+    (know || []).forEach(function (d) { var p = get(d); p.know = parse(d.results) || {}; p.kAt = tdate(d.updated); });
+    (tests || []).forEach(function (d) { var p = get(d); p.tests = parse(d.results) || {}; p.tAt = tdate(d.updated); });
+    return Object.keys(P).map(function (k) { return P[k]; });
+  }
+  /* cut-offs come from know.js (PHQ/GAD bands ≥15 high, ≥10 moderate; WHO-5 ≤28%) and tests.js (the results that show the referral box) */
+  function alerts(PP) {
+    var out = [];
+    PP.forEach(function (p) {
+      var w = p.know && p.know.well, add = function (lv, ins, score, band, at) { out.push({ p: p, lv: lv, ins: ins, score: score, band: band, at: at }); };
+      if (w) {
+        var nI = (w.phqI || []).length, PH = nI >= 9 ? 'PHQ-9' : 'PHQ-8', mx = nI >= 9 ? 27 : 24;
+        if (nI >= 9 && +w.phqI[8] > 0) add(0, PH + ' · البند 9 (أفكار إيذاء النفس)', w.phqI[8] + ' / 3', 'أولوية قصوى: اتواصل معاه النهارده', p.kAt);
+        if (w.phq >= 15) add(1, PH + ' (المزاج)', w.phq + ' / ' + mx, 'مرتفع', p.kAt); else if (w.phq >= 10) add(2, PH + ' (المزاج)', w.phq + ' / ' + mx, 'متوسط', p.kAt);
+        if (w.gad >= 15) add(1, 'GAD-7 (القلق)', w.gad + ' / 21', 'مرتفع', p.kAt); else if (w.gad >= 10) add(2, 'GAD-7 (القلق)', w.gad + ' / 21', 'متوسط', p.kAt);
+        if (w.who != null && w.who * 4 <= 28) add(2, 'WHO-5 (الرفاهية)', (w.who * 4) + '%', 'منخفضة جدًا', p.kAt);
+      }
+      var t = p.tests || {}, Q = TQ(), band = function (k, def) { try { return Q[k].show(t[k])[0][2][1]; } catch (e) { return def; } }, at = function (k) { return t[k].at ? new Date(t[k].at) : p.tAt; };
+      if (t.asrs && t.asrs.shaded >= 4) add(2, QN.asrs, t.asrs.shaded + ' / 6 في المنطقة المظللة', band('asrs', 'الفرز إيجابي'), at('asrs'));
+      if (t.pss && t.pss.total >= 27) add(2, QN.pss, t.pss.total + ' / 40', band('pss', 'ضغط مرتفع'), at('pss'));
+      if (t.ucla && t.ucla.total >= 6) add(2, QN.ucla, t.ucla.total + ' / 9', band('ucla', 'وحدة واضحة'), at('ucla'));
+    });
+    return out.sort(function (a, b) { return a.lv - b.lv || ((b.at ? b.at.getTime() : 0) - (a.at ? a.at.getTime() : 0)); });
+  }
+  function alertsHtml(L) {
+    if (!L.length) return '';
+    var urgent = L.filter(function (a) { return a.lv === 0; }).length, CH = ['r', 'r', 'y'], ppl = {}; L.forEach(function (a) { ppl[a.p.id] = 1; });
+    return '<div class="an-al"><h4 style="margin:0">تنبيهات تحتاج متابعة (' + Object.keys(ppl).length + ' طالب)</h4>' +
+      (urgent ? '<p style="margin:0;color:#b3261e"><b>فيه ' + urgent + ' إجابة بأفكار إيذاء النفس.</b> اتواصل مع الطالب النهارده واتبع بروتوكول الأزمة مع المشرف المرخّص.</p>' : '') +
+      '<div class="an-tw"><table><thead><tr><th>الطالب</th><th>الأداة</th><th>الدرجة</th><th>المستوى</th><th>التاريخ</th></tr></thead><tbody>' + L.map(function (a) {
+        return '<tr class="an-lv' + a.lv + '"><td><b>' + E(a.p.name || 'ضيف') + '</b>' + (a.p.email ? '<br><small dir="ltr">' + E(a.p.email) + '</small>' : '') + (a.p.phone ? '<br><a dir="ltr" href="tel:' + E(a.p.phone.replace(/[^\d+]/g, '')) + '">' + E(a.p.phone) + '</a>' : '') + '</td><td>' + E(a.ins) + '</td><td>' + E(a.score) + '</td><td><span class="an-c ' + CH[a.lv] + '">' + E(a.band) + '</span></td><td>' + (a.at ? E(a.at.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })) : '—') + '</td></tr>';
+      }).join('') + '</tbody></table></div><p class="muted" style="margin:0;font-size:12.5px">دي أدوات فرز مش تشخيص: التنبيه معناه إن الطالب يستاهل تتواصل معاه وتطمن عليه. خط الصحة النفسية في مصر <b dir="ltr">16328</b>.</p></div>';
+  }
+  /* one row per student per instrument; item columns hold the stored responses */
+  function itemsCsv(PP, A) {
+    var rows = [], N = 0, Q = TQ();
+    var push = function (p, src, ins, at, total, code, items) { items = items || []; N = Math.max(N, items.length); rows.push([p.name || 'ضيف', p.email, p.phone, src, ins, stamp(at), total, code].concat(items)); };
+    PP.forEach(function (p) {
+      var k = p.know || {}, w = k.well;
+      if (w) {
+        if (w.whoI) push(p, 'اعرف نفسك', 'WHO-5', p.kAt, w.who, 'كل بند 0–5؛ المجموع × 4 = النسبة المئوية', w.whoI);
+        if (w.phqI) push(p, 'اعرف نفسك', w.phqI.length >= 9 ? 'PHQ-9' : 'PHQ-8', p.kAt, w.phq, 'كل بند 0–3', w.phqI);
+        if (w.gadI) push(p, 'اعرف نفسك', 'GAD-7', p.kAt, w.gad, 'كل بند 0–3', w.gadI);
+      }
+      [['m6', 'ضغط التواجد الرقمي الدائم'], ['m2', 'الاعتماد المعرفي على الذكاء الاصطناعي']].forEach(function (x) { var m = k[x[0]]; if (m) push(p, 'اعرف نفسك', x[1], p.kAt, m.combined != null ? Math.round(m.combined) : '', 'الإجابات بندًا بندًا مش متخزنة؛ الدرجة المركبة 0–100 (مباشرة ' + (m.direct != null ? Math.round(m.direct) : '—') + '، غير مباشرة ' + (m.indirect != null ? Math.round(m.indirect) : '—') + ')'); });
+      var t = p.tests || {};
+      Object.keys(t).filter(function (id) { return id.charAt(0) !== '_' && t[id]; }).forEach(function (id) {
+        var r = t[id], at = r.at ? new Date(r.at) : p.tAt, q = Q[id];
+        if (r.kind === 'c' || COGN[id]) return push(p, 'مكتبة الاختبارات', COGN[id] || id, at, r.pct != null ? r.pct + '%' : '', 'مهمة معرفية: ' + (r.ok | 0) + ' صح من ' + (r.n | 0) + '، الوسيط ' + (r.med | 0) + ' مللي ثانية');
+        var tot = r.total != null ? r.total : r.mean != null ? (+r.mean).toFixed(2) : r.sub ? Object.keys(r.sub).map(function (s) { return s + '=' + r.sub[s]; }).join(' ') : '';
+        if (id === 'asrs' && r.shaded != null) tot = r.total + ' (المظللة ' + r.shaded + '/6)';
+        var a = r.a || [], scored = !!(q && q.it && q.opts && a.length === q.it.length && id !== 'asrs');
+        var items = scored ? a.map(function (v, i) { return (q.it[i][1] ? q.opts.length - 1 - v : v) + q.min; }) : a;
+        push(p, 'مكتبة الاختبارات', QN[id] || (q && q.t) || id, at, tot, scored ? 'درجة البند بعد عكس العبارات العكسية (من ' + q.min + ' لـ ' + (q.opts.length - 1 + q.min) + ')' : a.length ? 'رقم الاختيار الخام (أول اختيار = 0)' : 'الإجابات بندًا بندًا مش متخزنة', items);
+      });
+    });
+    var head = ['الاسم', 'الإيميل', 'التليفون', 'المصدر', 'الأداة', 'التاريخ', 'الدرجة الكلية', 'الترميز']; for (var i = 1; i <= N; i++) head.push('بند ' + i);
+    saveFile('item-responses-' + A + '-' + dkey(Date.now()) + '.csv', '﻿' + [head].concat(rows).map(function (l) { return l.map(cq).join(','); }).join('\r\n'), 'text/csv;charset=utf-8');
+    return rows.length;
+  }
+  /* full JSON backup of every collection the admin can read (Firestore timestamps become ISO strings) */
+  var BK = function () { return 'an-backup-' + app(); };
+  function plain(v) { if (v == null || typeof v !== 'object') return v; if (typeof v.toDate === 'function') { try { return v.toDate().toISOString(); } catch (e) { } } if (Array.isArray(v)) return v.map(plain); var o = {}; Object.keys(v).forEach(function (k) { o[k] = plain(v[k]); }); return o; }
+  async function backup(fs) {
+    var C = ['users', 'know', 'tests', 'gates', 'admins', 'invites', 'visits', 'leaderboard'], out = { site: app(), title: document.title, exported: new Date().toISOString(), by: (function () { try { return fs.email ? fs.email() : ''; } catch (e) { return ''; } })(), note: 'نتائج know و tests محفوظة في الحقل results كنص JSON زي ما هي في قاعدة البيانات.', collections: {}, unreadable: {} };
+    await Promise.all(C.map(function (c) { return fs.list(c).then(function (d) { out.collections[c] = plain(d); }, function (e) { out.unreadable[c] = String((e && (e.code || e.message)) || e); }); }));
+    var n = 0; Object.keys(out.collections).forEach(function (c) { n += out.collections[c].length; });
+    saveFile('backup-' + app() + '-' + dkey(Date.now()) + '.json', JSON.stringify(out, null, 1), 'application/json');
+    try { localStorage.setItem(BK(), String(Date.now())); } catch (e) { }
+    return n;
+  }
+  function backupNote() {
+    var t = 0; try { t = +localStorage.getItem(BK()) || 0; } catch (e) { }
+    if (!t) return '<span class="an-c y">لسه ما نزّلتش نسخة احتياطية. يستحسن تنزّل واحدة دلوقتي.</span>';
+    var d = Math.floor((Date.now() - t) / DAY);
+    return d > 7 ? '<span class="an-c y">آخر نسخة احتياطية من ' + d + ' يوم. نزّل واحدة جديدة.</span>' : '<span class="muted" style="font-size:12.5px">آخر نسخة احتياطية: ' + E(new Date(t).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })) + '</span>';
+  }
   async function render(el, fs) {
     css(); var A = app();
     el.innerHTML = '<section class="ad-card an"><h3>تحليلات الطلاب والزوار</h3><p class="muted">جارٍ التحميل…</p></section>';

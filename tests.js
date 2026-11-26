@@ -106,9 +106,9 @@ var TESTS = (function () {
     var done = Object.keys(st.r).length, total = Object.keys(Q).length + Object.keys(COG).length;
     frame('<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">مكتبة الاختبارات</h2><span class="muted small">خلّصت ' + done + ' من ' + total + '</span></div><p class="muted" style="margin:0">مقاييس نفسية منشورة ومجانية (ترجمة عمل للتدريب)، ومهام قدرات عقلية مولّدة في المختبر. النتايج على جهازك' + (shared() ? '، ومتشاركة مع المسؤول لأنك وافقت في «اعرف نفسك»' : '') + '. <b>ده فرز وتعلّم مش تشخيص.</b></p>' +
       Object.keys(doms).map(function (d) { return '<h3 style="margin:6px 0 0">' + E(d) + '</h3><div class="ts-grid">' + doms[d].map(function (x) { var r = st.r[x[1]]; return '<button class="ts-card" data-t="' + x[0] + ':' + x[1] + '"><b>' + E(x[2].t) + '</b><small>' + E(x[2].s) + '</small>' + (r ? '<span class="ts-done">✓ اتعمل ' + E(new Date(r.at).toLocaleDateString('ar-EG')) + ' · دوس تشوف النتيجة أو تعيده</span>' : '') + '</button>'; }).join('') + '</div>'; }).join('') +
-      (done ? '<div class="ts-box"><div><button class="ts-btn" id="tsProf">بروفايلي الكامل</button></div></div>' : ''));
+      (done ? '<div class="ts-box"><div><button class="ts-btn" id="tsProf">بروفايلي الكامل</button></div></div>' : '') + '<p class="small" style="margin:0;text-align:center"><button class="ts-btn g" id="tsQR">كود QR لاختبار (للمحاضر)</button></p>');
     root.querySelectorAll('[data-t]').forEach(function (b) { b.onclick = function () { var p = b.dataset.t.split(':'); if (st.r[p[1]]) return result(p[0], p[1]); p[0] === 'q' ? runQ(p[1]) : runC(p[1]); }; });
-    var pf = document.getElementById('tsProf'); if (pf) pf.onclick = profile;
+    var pf = document.getElementById('tsProf'); if (pf) pf.onclick = profile; var qb = document.getElementById('tsQR'); if (qb) qb.onclick = qrPage;
   }
   function runQ(id) {
     var q = Q[id], i = 0, ans = [];
@@ -165,7 +165,26 @@ var TESTS = (function () {
     document.getElementById('tsHome').onclick = home;
   }
   var _runC = runC; runC = function (id) { curId = id; return _runC(id); };
-  function mount(el) { root = el; css(); home(); }
+  function link(k, id) { return location.origin + location.pathname + '#tests/' + k + '-' + id; }
+  function loadQR(cb) { if (window.qrcode) return cb(); var s = document.createElement('script'); s.src = 'qr.js?v=6e6189e2b1'; s.onload = function () { cb(); }; s.onerror = function () { cb(new Error('qr')); }; document.head.appendChild(s); }
+  function qrPage() {
+    var opts = Object.keys(Q).map(function (k) { return ['q', k, Q[k].t]; }).concat(Object.keys(COG).map(function (k) { return ['c', k, COG[k].t]; }));
+    frame('<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">كود QR للاختبار</h2><button class="ts-btn g" id="tsHome">رجوع</button></div>' +
+      '<div class="ts-box"><p class="muted small" style="margin:0">اختار الاختبار واطبع الكود أو اعرضه في المحاضرة. الطالب يصوّره بالموبايل ويفتح الاختبار على طول.</p>' +
+      '<select id="qrSel" style="padding:8px;border-radius:10px;font:inherit">' + opts.map(function (o) { return '<option value="' + o[0] + '-' + E(o[1]) + '">' + E(o[2]) + '</option>'; }).join('') + '</select>' +
+      '<div id="qrOut" style="display:flex;flex-direction:column;align-items:center;gap:8px"></div></div>');
+    document.getElementById('tsHome').onclick = home;
+    var sel = document.getElementById('qrSel'), out = document.getElementById('qrOut');
+    function draw() { var p = sel.value.split('-'), k = p.shift(), id = p.join('-'), u = link(k, id), t = sel.options[sel.selectedIndex].text;
+      loadQR(function (err) { if (err || !window.qrcode) { out.innerHTML = '<p style="margin:0">مقدرتش أعمل الكود. انسخ اللينك: <span dir="ltr">' + E(u) + '</span></p>'; return; }
+        var q = qrcode(0, 'M'); q.addData(u); q.make(); var img = q.createDataURL(8, 16);
+        out.innerHTML = '<b>' + E(t) + '</b><img src="' + img + '" alt="QR" style="width:260px;height:260px;image-rendering:pixelated;background:#fff;border-radius:8px"><span dir="ltr" class="small" style="word-break:break-all">' + E(u) + '</span>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="ts-btn" download="qr-' + E(id) + '.gif" href="' + img + '" style="text-decoration:none">نزّل الصورة</a><button class="ts-btn g" id="qrCp">انسخ اللينك</button></div>';
+        document.getElementById('qrCp').onclick = function () { try { navigator.clipboard.writeText(u); this.textContent = 'اتنسخ ✓'; } catch (e) { } }; }); }
+    sel.onchange = draw; draw();
+  }
+  function deep() { var m = (location.hash || '').match(/^#tests\/([qc])-([\w-]+)/); if (!m) return false; var ok = m[1] === 'q' ? Q[m[2]] : COG[m[2]]; if (!ok) return false; if (st.r[m[2]]) result(m[1], m[2]); else (m[1] === 'q' ? runQ : runC)(m[2]); return true; }
+  function mount(el) { root = el; css(); if ((location.hash || '') === '#tests/qr') return qrPage(); if (!deep()) home(); }
   if (typeof VIEWS !== 'undefined') VIEWS.tests = mount;
   else { var route = function () { if ((location.hash || '').slice(1).split('/')[0] !== 'tests') return; var v = document.getElementById('view'); if (v) mount(v); }; addEventListener('hashchange', function () { setTimeout(route, 0); }); if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(route, 0); }); else setTimeout(route, 0); }
   return { mount: mount, Q: Q, state: function () { return st; } };

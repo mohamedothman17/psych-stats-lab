@@ -166,7 +166,7 @@ var TESTS = (function () {
   }
   var _runC = runC; runC = function (id) { curId = id; return _runC(id); };
   function link(k, id) { return location.origin + location.pathname + '#tests/' + k + '-' + id; }
-  function loadQR(cb) { if (window.qrcode) return cb(); var s = document.createElement('script'); s.src = 'qr.js?v=6e6189e2b1'; s.onload = function () { cb(); }; s.onerror = function () { cb(new Error('qr')); }; document.head.appendChild(s); }
+  function loadQR(cb) { if (window.qrcode) return cb(); var s = document.createElement('script'); s.src = 'qr.js?v=6e6189e2'; s.onload = function () { cb(); }; s.onerror = function () { cb(new Error('qr')); }; document.head.appendChild(s); }
   function qrPage() {
     var opts = Object.keys(Q).map(function (k) { return ['q', k, Q[k].t]; }).concat(Object.keys(COG).map(function (k) { return ['c', k, COG[k].t]; }));
     frame('<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">كود QR للاختبار</h2><button class="ts-btn g" id="tsHome">رجوع</button></div>' +

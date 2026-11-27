@@ -237,5 +237,5 @@ var KNOW = (function () {
   // scales lab: register a view; statistics lab: route on #know
   if (typeof VIEWS !== 'undefined') VIEWS.know = mount;
   else { var route = function () { if ((location.hash || '').slice(1).split('/')[0] !== 'know') return; var v = document.getElementById('view'); if (v) mount(v); }; addEventListener('hashchange', function () { setTimeout(route, 0); }); if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(route, 0); }); else setTimeout(route, 0); }
-  return { mount: mount, state: function () { return st; } };
+  return { mount: mount, sync: sync, state: function () { return st; } };
 })();

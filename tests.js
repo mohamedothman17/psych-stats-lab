@@ -187,5 +187,5 @@ var TESTS = (function () {
   function mount(el) { root = el; css(); if ((location.hash || '') === '#tests/qr') return qrPage(); if (!deep()) home(); }
   if (typeof VIEWS !== 'undefined') VIEWS.tests = mount;
   else { var route = function () { if ((location.hash || '').slice(1).split('/')[0] !== 'tests') return; var v = document.getElementById('view'); if (v) mount(v); }; addEventListener('hashchange', function () { setTimeout(route, 0); }); if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(route, 0); }); else setTimeout(route, 0); }
-  return { mount: mount, Q: Q, state: function () { return st; } };
+  return { mount: mount, sync: sync, Q: Q, state: function () { return st; } };
 })();

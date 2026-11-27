@@ -612,7 +612,7 @@ body:not(.is-admin) [data-go="admin"],body:not(.is-admin) [data-m="admin"],body:
     <button class="tab" data-tab="me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>إنجازاتي</button>
   </nav>
   <main id="view"></main>
-  <footer class="foot">إعداد الطالب: محمد عثمان — الدبلوم الخاص في علم النفس<br>مادة الإحصاء — محاضرات الدكتورة إلهام جلال</footer>
+  <footer class="foot"><a href="https://mohamedothman17.github.io/psych-scales-lab/hub/">جديد: منصة الباحث والأخصائي وولي الأمر (نسخة تجريبية) ←</a><br>إعداد الطالب: محمد عثمان — الدبلوم الخاص في علم النفس<br>مادة الإحصاء — محاضرات الدكتورة إلهام جلال</footer>
 </div>
 <div id="ov" class="ov" hidden><div class="in" id="ovIn"></div></div>
 <div id="toast" class="toast" hidden></div>
@@ -769,7 +769,7 @@ window.addEventListener("hashchange",route);
 function setTab(t){$$(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t))}
 $$(".tab").forEach(b=>b.onclick=()=>go(b.dataset.tab));
 /* Lazy chunks: route code, lesson text and shared modules load on first use; the loader keeps execution order. */
-const CHUNK_SRC={lessons:"stats-lessons.js?v=7661dcd9",labs:"stats-labs.js?v=1907b74d",spss:"stats-spss.js?v=1c8e81e7",build:"stats-build.js?v=7ec83d87",config:"firebase-config.js?v=eda8311d",account:"account.js?v=41f29d65",privacy:"privacy.js?v=2298d6fa",visits:"visits.js?v=60e8c491",exam:"stats-exam.js?v=55ac3a71",audience:"audience.js?v=00c14371",constructs:"constructs.js?v=daa0e288",destrieux:"destrieux.js?v=ddb32acb",neuro:"stats-neuro.js?v=df252a82",know:"know.js?v=fde51a8a",tests:"tests.js?v=31ee9900",reward:"reward.js?v=ea623b54",thesis:"stats-thesis.js?v=08dd84c0",admin:"admin.js?v=7076a1a8",gsap:"vendor/anim/gsap.min.js",strig:"vendor/anim/ScrollTrigger.min.js",split:"vendor/anim/SplitText.min.js",lenis:"vendor/anim/lenis.min.js",motion:"stats-motion.js?v=61cde467"};
+const CHUNK_SRC={lessons:"stats-lessons.js?v=7661dcd960",labs:"stats-labs.js?v=1907b74dd0",spss:"stats-spss.js?v=1c8e81e73c",build:"stats-build.js?v=7ec83d87a5",config:"firebase-config.js?v=eda8311df0",account:"account.js?v=41f29d6599",privacy:"privacy.js?v=2298d6faf6",visits:"visits.js?v=60e8c491af",exam:"stats-exam.js?v=55ac3a711d",audience:"audience.js?v=00c143715b",constructs:"constructs.js?v=daa0e28890",destrieux:"destrieux.js?v=ddb32acb91",neuro:"stats-neuro.js?v=df252a822e",know:"know.js?v=bb8d948c17",tests:"tests.js?v=64fd0d963e",reward:"reward.js?v=ea623b54b3",thesis:"stats-thesis.js?v=08dd84c0a0",admin:"admin.js?v=877729de75",gsap:"vendor/anim/gsap.min.js",strig:"vendor/anim/ScrollTrigger.min.js",split:"vendor/anim/SplitText.min.js",lenis:"vendor/anim/lenis.min.js",motion:"stats-motion.js?v=61cde467ea"};
 const CHUNKS={},CHUNK_OK={};
 function loadChunk(src){return CHUNKS[src]||(CHUNKS[src]=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src=src;sc.async=false;sc.onload=res;sc.onerror=()=>{delete CHUNKS[src];sc.remove();rej(new Error("load "+src))};document.head.appendChild(sc)}))}
 const needChunks=names=>Promise.all(names.map(n=>loadChunk(CHUNK_SRC[n]).then(()=>{CHUNK_OK[n]=1})));
@@ -813,7 +813,7 @@ function route(){
  if(h[0]==="lab"){setTab("lab");return h[1]?renderLab(h[1],h[2]):renderLabs()}
  if(h[0]==="spss"){setTab("spss");return renderSpss(h[1])}
  if(h[0]==="practice"){setTab("practice");return renderPractice()}
- if(h[0]==="laws"){setTab("laws");view.innerHTML='<div id="lwv" style="--lw-accent:var(--teal)"><p class="muted">جارٍ تحميل القوانين…</p></div>';const run=()=>{const el=$("#lwv");if(el)LAWS.render(el)};if(window.LAWS)return run();if(!window.__lwLoading){window.__lwLoading=1;const sc=document.createElement("script");sc.src="laws.js?v=cca56bd5";sc.onload=run;sc.onerror=()=>{window.__lwLoading=0;const el=$("#lwv");if(el)el.textContent="تعذر تحميل صفحة القوانين. تحقق من الاتصال وحدّث الصفحة."};document.head.appendChild(sc)}return}
+ if(h[0]==="laws"){setTab("laws");view.innerHTML='<div id="lwv" style="--lw-accent:var(--teal)"><p class="muted">جارٍ تحميل القوانين…</p></div>';const run=()=>{const el=$("#lwv");if(el)LAWS.render(el)};if(window.LAWS)return run();if(!window.__lwLoading){window.__lwLoading=1;const sc=document.createElement("script");sc.src="laws.js?v=cca56bd5f2";sc.onload=run;sc.onerror=()=>{window.__lwLoading=0;const el=$("#lwv");if(el)el.textContent="تعذر تحميل صفحة القوانين. تحقق من الاتصال وحدّث الصفحة."};document.head.appendChild(sc)}return}
  if(h[0]==="me"){setTab("me");return renderMe()}
  if(h[0]==="account"){setTab("me");return renderAccount()}
  if(h[0]==="stats"){setTab("stats");return renderStats()}
